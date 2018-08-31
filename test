@@ -1,0 +1,123 @@
+// test opencv.cpp : 定义控制台应用程序的入口点。
+//
+
+#include <iostream>  
+#include<core/core.hpp>  
+#include<highgui/highgui.hpp> 
+#include <opencv2/imgproc/imgproc.hpp>
+#include <string>
+using namespace cv;
+using namespace std;
+
+bool  ROI_AddImage(Mat scr,int step);
+void cut(Mat src, int step);
+void createBlackMat(Mat &mat,int color);
+
+int main()
+{
+	Mat src = imread("city.jpg");
+	Mat dst = src.clone();
+	cut(dst, 50);
+	/*
+	for (int i = 0; i < 20; i++)
+	{
+		ROI_AddImage(dst, 10);
+		string filename = ".jpg";
+		string index = to_string(i);
+		filename = index + filename;
+		cv::imwrite(filename, dst);
+	}
+	*/
+	waitKey(0);
+	return 0;
+}
+
+
+
+
+//----------------------------------【ROI_AddImage( )函数】----------------------------------
+// 函数名：ROI_AddImage（）
+//    描述：利用感兴趣区域ROI实现图像叠加
+//----------------------------------------------------------------------------------------------
+bool  ROI_AddImage(Mat srcImage, int step)
+{
+
+	Mat dstImage;
+
+	if (!srcImage.data) { printf("读取srcImage1错误~！ \n"); return false; }
+
+	// 【2】定义一个Mat类型并给其设定ROI区域
+	Size img_size = srcImage.size();
+	Mat imageROI = srcImage(Rect(0, 0, img_size.width, img_size.height*0.53));
+	Mat blankROI = srcImage(Rect(img_size.width-step, 0, step, img_size.height*0.53));
+	Mat t_mat = Mat::zeros(2, 3, CV_32FC1);
+
+
+	t_mat.at<float>(0, 0) = 1;
+	t_mat.at<float>(0, 2) = step; //水平平移量
+	t_mat.at<float>(1, 1) = 1;
+	t_mat.at<float>(1, 2) = 0; //竖直平移量
+	Size dst_sz = dstImage.size();
+	//根据平移矩阵进行仿射变换
+	warpAffine(imageROI, dstImage, t_mat, dst_sz);
+
+	//imshow("Shifted ROI", dstImage);
+	//imshow("Origin", srcImage);
+	//imshow("blank", blankROI);
+
+	
+
+	Mat addArea = dstImage(Rect(0, 0, blankROI.cols, blankROI.rows));
+	addWeighted(addArea, 0, blankROI, 1, 0, addArea);
+ 	//imshow("add", dstImage);
+	addWeighted(imageROI, 0, dstImage, 1, 0, imageROI);
+	//imshow("final", srcImage);
+
+	return true;
+}
+
+
+void cut(Mat src, int step)
+{
+	Size img_size = src.size();
+	Mat roi_1 = src(Rect(0, 0, img_size.width/2, img_size.height*0.53));
+	Mat roi_2 = src(Rect(img_size.width / 2, 0, img_size.width / 2, img_size.height*0.53));
+	Mat white(img_size.height*0.53, step, CV_8UC3);
+	createBlackMat(white,255);
+
+	Mat dst;
+	hconcat(roi_2, white, dst);
+ 	hconcat(dst,roi_1,dst);
+	
+
+	Mat dst2;
+	Mat black(img_size.height*0.53, img_size.width / 2, CV_8UC3);
+	createBlackMat(black,0);
+	hconcat(black, white, dst2);
+	hconcat(dst2, black, dst2);
+
+	imshow("combine", dst);
+	imshow("mask", dst2);
+	imwrite("reday.jpg", dst);
+	imwrite("mask.jpg", dst2);
+}
+
+
+
+
+
+void createBlackMat(Mat &mat,int color)
+{
+	for (int i = 0; i < mat.rows; ++i) 
+	{
+		for (int j = 0; j < mat.cols; ++j) 
+		{
+			Vec3b&rgba = mat.at<Vec3b>(i, j);
+			rgba[0] = color;
+			rgba[1] = color;
+			rgba[2] = color;
+		}
+	}
+}
+
+
