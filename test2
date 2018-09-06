@@ -1,0 +1,326 @@
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#include <stdio.h>
+#include <iostream>
+using namespace std;
+
+#define MAX_MAP_SIZE	64
+#define ZONE_SIZE	4
+
+#define MAX_SCAN_COUNT	100000
+
+extern void reconstruct(int N, char map[MAX_MAP_SIZE][MAX_MAP_SIZE]);
+
+static char map[MAX_MAP_SIZE][MAX_MAP_SIZE];
+static int N;
+static int seed;
+static int scancount;
+
+static int pseudo_rand()
+{
+	seed = seed * 214013 + 2531011;
+	return (seed >> 16) & 0x7fff;
+}
+
+void randomscan(char zone[ZONE_SIZE][ZONE_SIZE])
+{
+	if (scancount >= MAX_SCAN_COUNT) return;
+
+	int x0 = (pseudo_rand() % ((N - ZONE_SIZE) / 2 + 1)) * 2;//x0 = 0,2,4,...,N-4
+	int y0 = (pseudo_rand() % ((N - ZONE_SIZE) / 2 + 1)) * 2;//y0 = 0,2,4,...,N-4
+
+	for (int y = 0; y < ZONE_SIZE; ++y)
+	for (int x = 0; x < ZONE_SIZE; ++x)
+		zone[y][x] = map[y + y0][x + x0];
+
+	++scancount;
+}
+
+static void makemap()
+{
+	for (int y = 0; y < N; ++y)
+	for (int x = 0; x < N; ++x)
+		map[y][x] = pseudo_rand() % 15 + 1;
+}
+
+static bool compare(char map1[MAX_MAP_SIZE][MAX_MAP_SIZE], char map2[MAX_MAP_SIZE][MAX_MAP_SIZE])
+{
+	for (int y = 0; y < N; ++y)
+	for (int x = 0; x < N; ++x)
+	if (map1[y][x] != map2[y][x])
+		return false;
+
+	return true;
+}
+
+int main()
+{
+	int TC, totalscore, totalscan;
+	freopen("sample_input.txt", "r", stdin);
+	setbuf(stdout, NULL);
+	scanf("%d", &TC);
+
+	totalscore = totalscan = 0;
+	for (int testcase = 1; testcase <= TC; ++testcase)
+	{
+		char guess[MAX_MAP_SIZE][MAX_MAP_SIZE];
+		int min_scan_count;
+
+		scanf("%d %d %d", &N, &seed, &min_scan_count);
+
+		makemap();
+
+		scancount = 0;
+
+		for (int y = 0; y < N; ++y)
+		{
+			for (int x = 0; x < N; ++x)
+			{
+				guess[y][x] = 0;
+			}
+		}
+
+		for (int k = 0; k < N; ++k)
+		{
+			guess[k][0] = map[k][0];
+			guess[0][k] = map[0][k];
+			guess[k][1] = map[k][1];
+			guess[1][k] = map[1][k];
+			guess[k][N - 1] = map[k][N - 1];
+			guess[N - 1][k] = map[N - 1][k];
+			guess[k][N - 2] = map[k][N - 2];
+			guess[N - 2][k] = map[N - 2][k];
+		}
+
+		reconstruct(N, guess);
+
+		if (!compare(map, guess))
+		{
+			scancount = MAX_SCAN_COUNT;
+		}
+		totalscan += scancount;
+
+		int score;
+		if (TC == 5)
+		{
+			score = scancount < MAX_SCAN_COUNT ? 100 : 0;
+		}
+		else
+		{
+			score = scancount <= min_scan_count + (min_scan_count / 2) ? 100 : 0;
+		}
+		totalscore += score;
+
+		printf("#%d %d\n", testcase, score);
+	}
+
+	if (totalscan > MAX_SCAN_COUNT) totalscan = MAX_SCAN_COUNT;
+	//printf("total score = %d, total scan = %d\n", totalscore / TC, totalscan);
+	return 0;
+}
+
+
+
+typedef struct block
+{
+	int is_completecd;  //0: can't check, 1: able to check, 2: no need to check(completed)
+	int row;
+	int col;
+	int type; //0: center, 1: up, 2:right, 3:down, 4:left, 
+	   //5:up left corner, 6:right up corner, 7:dwon right corner, 8: down left corner
+
+};
+bool compareBlock(block temp,char zoon[4][4] );
+void writeMap(block temp, char zoon[4][4] );
+
+void reconstruct(int N, char map[MAX_MAP_SIZE][MAX_MAP_SIZE])
+{
+	/*******************************INIT******************************************/
+	block b[32][32];
+	int i = 0;
+	int j = 0;
+
+	//up line
+	b[0][0].is_completecd = 1;
+	b[0][0].row = 0;
+	b[0][0].col = 0;
+	b[0][0].type = 5;
+	for (i = 1; i < (N - 4) / 2; i++)
+	{
+		block *temp;
+		temp= &b[0][i];
+		temp->is_completecd=1;
+		temp->col = i * 2;
+		temp->row = 0;
+		temp->type = 1;
+	}
+
+	//right line
+	b[0][(N-4)/2].is_completecd = 1;
+	b[0][(N-4)/2].col =N-4;
+	b[0][(N-4)/2].row = 0;
+	b[0][N-4].type = 6;
+	for (i = 1; i < (N - 4) / 2; i++)
+	{
+		block *temp;
+		temp = &b[i][(N-4)/2];
+		temp->is_completecd = 1;
+		temp->col = N-4;
+		temp->row = i*2;
+		temp->type = 2;
+	}
+
+
+	//down line
+	b[(N - 4) / 2][(N - 4) / 2].is_completecd = 1;
+	b[(N - 4) / 2][(N - 4) / 2].row = N - 4;
+	b[(N - 4) / 2][(N - 4) / 2].col = N - 4;
+	b[(N - 4) / 2][(N - 4) / 2].type = 7;
+	for (i = 1; i < (N - 4) / 2; i++)
+	{
+		block *temp;
+		temp = &b[(N-4)/2][i];
+		temp->is_completecd = 1;
+		temp->col = i * 2;
+		temp->row = N - 4;
+		temp->type = 3;
+	}
+
+
+	//left line
+	b[(N - 4) / 2][0].is_completecd = 1;
+	b[(N - 4) / 2][0].col = 0;
+	b[(N - 4) / 2][0].row = N - 4;
+	b[(N - 4) / 2][0].type = 8;
+	for (i = 1; i < (N - 4) / 2; i++)
+	{
+		block *temp;
+		temp = &b[i][0];
+		temp->is_completecd = 1;
+		temp->col = 0;
+		temp->row = i*2;
+		temp->type = 4;
+	}
+
+	//center
+	for (i = 1; i < (N - 4) / 2; i++)
+	{
+		for (j = 1; j < (N - 4) / 2; j++)
+		{
+			block *temp;
+			temp = &b[i][j];
+			temp->is_completecd = 0;
+			temp->col = j*2;
+			temp->row = i * 2;
+			temp->type = 0;
+		}
+	}
+	/*
+	for (i = 0; i < (N - 2) / 2; i++)
+	{
+		for (j = 0; j < (N - 2) / 2; j++)
+		{
+			cout <<"("<< b[i][j].row<<"," << b[i][j].col << "),";
+		}
+		cout << endl;
+
+	}
+	*/
+
+	/*******************************INIT******************************************/
+
+	/***************************SCAN&COMPARE**************************************/
+	int remain_count = (N - 2) / 2 * (N - 2) / 2;
+	while (remain_count != 0)
+	{
+		char zoon[4][4];
+		randomscan(zoon);
+		int flag = 0;
+		for (i = 0; i < (N - 2) / 2; i++)
+		{
+			for (j = 0; j < (N - 2) / 2; j++)
+			{
+				if (compareBlock(b[i][j], zoon))
+				{
+					if (b[i][j].is_completecd == 2)
+					{
+						flag = 1;
+						break;
+					}
+					else
+					{
+						;
+					}
+				}
+			}
+			if (flag == 1)
+			{
+				break;
+			}
+			
+
+		};
+
+	}
+}
+
+
+
+bool compareBlock(block temp, char zoon[4][4])
+{
+	if (temp.is_completecd == 0 )
+	{
+		return false;
+	}
+	int i, j;
+	if (temp.is_completecd == 2)
+	{
+		for (i = 0; i < 4; i++)
+		{
+			for (j = 0; j < 4; j++)
+			{
+				if (zoon[i][j] != map[temp.row + i][temp.col + j])
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+
+	}
+
+	//slow compare
+	for (i = 0; i < 4; i++)
+	{
+		for (j = 0; j < 4; j++)
+		{
+			int tempValue = map[temp.row + i][temp.col + j];
+			if (tempValue != 0)
+			{
+				if (tempValue!=zoon[i][j])
+				{
+					return false;
+				}
+
+			}
+		}
+	}
+	return true;
+
+
+
+}
+
+void writeMap(block temp, char zoon[4][4])
+{
+	switch (temp.type)
+	{
+	case 1:
+		;
+		break;
+	default:
+		break;
+	}
+}
