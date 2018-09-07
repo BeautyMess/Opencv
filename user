@@ -1,0 +1,80 @@
+#include "head.h"
+int type[31][31] = {-1};   //31=(64-4)/2+1
+                           //type=-1, can't check
+                           //type= 0, wait to check
+                           //type= 1, completed
+int compareBlock(int y, int x, char zoon[4][4])
+{
+	int i, j;
+	int count_zero = 0;
+	for (i = 0; i < 4; i++)
+	{
+		for (j = 0; j < 4; j++)
+		{
+			if (map[y + i][x + j] == 0)
+			{
+				count_zero++;
+			}
+			else
+			{
+				if (map[y + i][x + j] != zoon[i][j])
+				{
+					return -1;
+				}
+			}
+			if (count_zero > 8)
+			{
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+
+void init(int N)
+{
+	int i, j;
+	int cur_len = (N - 4) / 2 + 1;
+	//up line
+	for (j = 0; j < cur_len; j++)
+	{
+		type[0][j] = 0;
+		type[cur_len - 1][j] = 0;
+	}
+	for (i = 1; i < cur_len-1; i++)
+	{
+		type[i][0] = 0;
+		type[i][cur_len - 1] = 0;
+	}
+}
+
+void completeMap(int y,int x,char zoon[4][4])
+{
+	//four situations
+	if (map[y][x] == 0)
+	{
+		;
+	}
+	if (map[y][x + 2] == 0)
+	{
+		;
+	}
+	if (map[y + 2][x] == 0)
+	{
+		;
+	}
+	if (map[y + 2][x + 2] == 0)
+	{
+		;
+	}
+
+}
+
+void reconstruct(int N, char map[MAX_MAP_SIZE][MAX_MAP_SIZE])
+{
+	init(N);
+
+
+
+
+}
